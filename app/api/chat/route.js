@@ -1,99 +1,164 @@
-// Server-side API route — proxies requests to Anthropic's Claude API
-// Keeps the API key safe (env var) and adds CORS protection
+﻿const guides = [
+  {
+    keywords: ["tinanggal", "tanggal", "trabaho", "termination", "fired", "walang abiso", "employee"],
+    answer: {
+      title: "Tinanggal sa trabaho nang walang abiso",
+      simple: "Maaaring may karapatan ka kung tinanggal ka sa trabaho nang walang sapat na dahilan o tamang proseso.",
+      law: "Sa Philippine labor law, karaniwang kailangan ang valid cause at due process bago tanggalin ang empleyado.",
+      steps: [
+        "Isulat ang timeline ng nangyari.",
+        "I-save ang employment contract, payslips, messages, memo, at termination notice kung meron.",
+        "Humingi ng written explanation mula sa employer.",
+        "Kung hindi maayos, lumapit sa DOLE/NLRC o kumonsulta sa abogado."
+      ],
+      docs: ["Employment contract", "Payslips", "Company ID", "Messages/emails", "Termination notice or memo"],
+      service: "Request legal service if you need a demand letter, NLRC complaint preparation, settlement support, or representation."
+    }
+  },
+  {
+    keywords: ["ofw", "abroad", "employer", "nagsasamantala", "agency", "recruitment"],
+    answer: {
+      title: "OFW concern / employer abuse abroad",
+      simple: "Kung OFW ka at inaabuso o pinagsasamantalahan ng employer, mahalagang i-document agad ang nangyayari at humingi ng tulong sa tamang ahensya.",
+      law: "Maaaring sakop ito ng employment contract, migrant worker protection rules, at assistance mechanisms ng DMW/OWWA/Philippine Embassy or Consulate.",
+      steps: [
+        "I-save ang contract, messages, payslips, passport/visa details, at agency information.",
+        "Makipag-ugnayan sa recruitment agency kung meron.",
+        "Contact DMW, OWWA, or Philippine Embassy/Consulate.",
+        "Kung may banta sa kaligtasan, humingi agad ng emergency assistance."
+      ],
+      docs: ["OFW contract", "Passport/visa copy", "Agency details", "Employer details", "Screenshots/messages", "Payslips"],
+      service: "Request legal service if you need formal documentation, agency complaint support, or coordination with counsel."
+    }
+  },
+  {
+    keywords: ["kontrata", "contract", "sme", "business", "review", "agreement"],
+    answer: {
+      title: "SME contract review",
+      simple: "Kung may kontrata ang negosyo mo, magandang ipa-review bago pumirma para malinaw ang obligations, payment terms, penalties, termination, at dispute process.",
+      law: "Contracts are generally binding if validly entered into, but risky clauses can create future liability.",
+      steps: [
+        "Ihanda ang full copy ng contract.",
+        "Markahan ang clauses na hindi malinaw.",
+        "Ilista ang commercial terms: presyo, delivery, payment, penalties, renewal, cancellation.",
+        "Mag-request ng legal review bago pumirma."
+      ],
+      docs: ["Draft contract", "Business registration", "Proposal/quotation", "Email negotiations", "Supplier/customer details"],
+      service: "Request legal service for contract review, contract drafting, or risk memo for your SME."
+    }
+  },
+  {
+    keywords: ["hindi nagbabayad", "collection", "collections", "utang", "supplier", "customer", "demand letter"],
+    answer: {
+      title: "Customer or supplier not paying",
+      simple: "Kung may hindi nagbabayad, unahin ang documentation, statement of account, at written demand bago lumala ang dispute.",
+      law: "Collection disputes often depend on contract terms, invoices, proof of delivery, and written acknowledgment of debt.",
+      steps: [
+        "Ihanda ang invoices, delivery receipts, SOA, at proof of acceptance.",
+        "Send a polite written reminder.",
+        "If unpaid, prepare a formal demand letter.",
+        "Consider settlement, barangay process if applicable, or legal action."
+      ],
+      docs: ["Invoices", "Statement of account", "Delivery receipts", "Purchase orders", "Acknowledgment messages", "Contract"],
+      service: "Request legal service if you need a demand letter, settlement agreement, or collection case evaluation."
+    }
+  },
+  {
+    keywords: ["upa", "renta", "tenant", "landlord", "pinaalis", "evict", "lease"],
+    answer: {
+      title: "Tenant / lease concern",
+      simple: "Hindi dapat basta-basta pinapaalis ang tenant nang walang tamang abiso o legal na proseso.",
+      law: "Lease rights depend on the lease contract, payment status, notices, and applicable rental laws or local rules.",
+      steps: [
+        "Check your lease contract.",
+        "Save payment records and notices.",
+        "Ask for written explanation from the landlord.",
+        "Seek legal help if there is harassment, lockout, or forced eviction."
+      ],
+      docs: ["Lease contract", "Receipts", "Notices", "Messages with landlord", "Photos/videos if there is harassment"],
+      service: "Request legal service for lease review, demand letter, or eviction defense support."
+    }
+  },
+  {
+    keywords: ["cyber", "online", "paninira", "defamation", "libel", "post", "facebook", "harassment"],
+    answer: {
+      title: "Online paninira / cyber concern",
+      simple: "Kung may paninira, harassment, or harmful post online, i-save agad ang ebidensya bago ito burahin.",
+      law: "Possible issues may involve cyber libel, harassment, privacy violations, or other cybercrime-related concerns depending on facts.",
+      steps: [
+        "Screenshot the post including date, account name, and URL.",
+        "Do not engage emotionally online.",
+        "Prepare a written timeline.",
+        "Consult a lawyer or report to proper authorities if serious."
+      ],
+      docs: ["Screenshots", "URLs", "Profile links", "Messages", "Witnesses", "Timeline"],
+      service: "Request legal service for evidence review, takedown letter, complaint preparation, or legal strategy."
+    }
+  }
+];
 
-export const runtime = "edge";
-export const dynamic = "force-dynamic";
+function formatAnswer(item) {
+  return `
+**${item.title}**
 
-const SYSTEM = `Ikaw si myGENE — kaibigan na nakakaalam ng Philippine law. Powered by Batasko (bettergov.ph). Hindi ka abogado, pero ikaw ang maaasahang gabay.
+**Simple answer:**  
+${item.simple}
 
-LANGUAGE RULE (importante): Sumagot ka sa parehong wika na ginamit ng user. Kung English ang user, English ang sagot. Kung Tagalog, Tagalog. Kung Taglish, Taglish. Wag mong i-force ang Tagalog kung English ang nagsulat.
+**Possible applicable right/law:**  
+${item.law}
 
-TONO: Mainit, kalmado, hindi corporate. Parang kaibigan na may legal background, hindi parang government website.
+**Practical next steps:**  
+${item.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
-EMERGENCY ROUTING (PRIORITY OVERRIDE):
-Kung may banggit ng physical abuse, domestic violence (VAWC), pananakot sa buhay, sexual abuse, human trafficking, o anumang immediate na panganib — UNAHIN ang safety:
+**Documents to prepare:**  
+${item.docs.map((d) => `- ${d}`).join("\n")}
 
-🚨 **Safety muna**
-Tumawag agad sa mga hotline na ito:
-• VAWC Hotline: **1343**
-• PNP Emergency: **117** o **911**
-• DSWD Crisis: **(02) 8931-8101**
+**When to request legal service:**  
+${item.service}
 
-Pagkatapos lang, magbigay ng karaniwang legal info.
+**Disclaimer:**  
+This provides general legal information only and is not a substitute for legal advice from a licensed lawyer.
+`;
+}
 
-NORMAL RESPONSE FORMAT (laging sundin):
-
-**Sitwasyon mo:**
-[1 sentence na restate]
-
-**Ano ang sabi ng batas:**
-[2-3 sentences, plain language. I-cite ang specific law: "Ayon sa Labor Code Art. 297..." o "Sa RA 9262..." Wag mahabang quotes.]
-
-**Iyong mga karapatan:**
-• [Right 1]
-• [Right 2]
-• [Right 3 kung applicable]
-
-**Susunod na hakbang:**
-1. [Immediate, doable action]
-2. [Where to go / who to contact: DOLE, PAO, barangay, etc.]
-
-**Disclaimer:**
-Hindi ito legal advice. Para sa partikular mong kaso, kumonsulta sa abogado o libreng PAO.
-
-AT THE END (importante), magdagdag ng isa sa mga tag na ito sa hiwalay na linya — based sa kategorya ng tanong:
-- Kung legal/personal concern (labor, family, criminal, civil, OFW): [[ESCALATE:LAW]]
-- Kung business/SME concern (permits, taxes, employer issues, business registration): [[ESCALATE:ADVISORY]]
-- Kung emergency/safety: [[ESCALATE:EMERGENCY]]
-- Kung general info lang: [[ESCALATE:NONE]]
-
-COVERAGE: Labor (DOLE, NLRC), OFW (RA 8042, RA 10022, POEA), Family (RA 9262 VAWC, annulment, Family Code), Consumer (RA 7394), Civil (property, contracts), basic Criminal, Business (DTI, BIR, SSS, permits), Tenant rights (UDHA).`;
-
-export async function POST(request) {
+export async function POST(req) {
   try {
-    const { messages } = await request.json();
+    const body = await req.json();
+    const message = String(body.message || "").toLowerCase();
 
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return Response.json({ error: "messages array required" }, { status: 400 });
-    }
+    const matched = guides.find((g) =>
+      g.keywords.some((keyword) => message.includes(keyword.toLowerCase()))
+    );
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return Response.json(
-        { error: "ANTHROPIC_API_KEY not configured on server" },
-        { status: 500 }
-      );
-    }
+    const answer = matched
+      ? formatAnswer(matched.answer)
+      : `
+**General legal information**
 
-    const upstream = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        system: SYSTEM,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-      }),
-    });
+Salamat. Para masagot nang mas maayos, kailangan malaman ang basic facts: ano ang nangyari, kailan nangyari, sino ang involved, may kontrata ba, may written notice ba, at may documents ka ba?
 
-    if (!upstream.ok) {
-      const errText = await upstream.text();
-      return Response.json(
-        { error: `Anthropic API error: ${errText}` },
-        { status: upstream.status }
-      );
-    }
+**Practical next steps:**  
+1. Isulat ang timeline.  
+2. I-save ang documents, messages, receipts, photos, or notices.  
+3. Tukuyin kung personal, labor, SME, lease, cybercrime, OFW, or barangay/LGU issue ito.  
+4. If action is needed, use AskAbogado QR as your legal intake gateway.
 
-    const data = await upstream.json();
-    return Response.json(data);
-  } catch (err) {
+**AskAbogado QR Solution:**  
+If legal service or SME legal support is needed, AskAbogado QR is the solution. It allows users or businesses to start a structured legal intake in one scan.
+
+**Disclaimer:**  
+This provides general legal information only and is not a substitute for legal advice from a licensed lawyer.
+`;
+
+    return Response.json({ reply: answer });
+  } catch (error) {
     return Response.json(
-      { error: err.message || "Unknown error" },
-      { status: 500 }
+      {
+        reply:
+          "Hindi makapagproseso ngayon. Pakisubukan muli. General legal information only, not legal advice."
+      },
+      { status: 200 }
     );
   }
 }
+
