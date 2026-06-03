@@ -281,13 +281,13 @@ export default function Home() {
 
         <footer className="mt-6 rounded-3xl border border-[#e7dccb] bg-white/70 p-4 text-xs leading-5 text-[#6f695f]">
           DMCV AskAbogado provides general legal information only and is not a
-          substitute for legal advice from a licensed lawyer. Inspired by free
-          public legal education approaches such as BatasKo. No official
-          partnership is claimed unless expressly stated.
+          substitute for legal advice from a licensed lawyer. Uses public legal education references such as BatasKo.com for source discovery and user guidance. No official partnership is claimed unless expressly stated.
         </footer>
       </section>
     </main>
   );
 }
+
+
 
 
