@@ -3,14 +3,38 @@
 import { useState } from "react";
 
 const topics = [
-  "Labor",
-  "OFW",
-  "SME Legal",
-  "Contracts",
-  "Collections",
-  "Tenant",
-  "Cybercrime",
-  "Barangay/LGU"
+  {
+    label: "Labor",
+    prompt: "Tinanggal ako sa trabaho nang walang abiso. May karapatan ba ako?"
+  },
+  {
+    label: "OFW",
+    prompt: "OFW ako. Nagsasamantala ang employer ko sa abroad."
+  },
+  {
+    label: "SME Legal",
+    prompt: "May employee issue ako sa negosyo. Ano ang dapat kong gawin?"
+  },
+  {
+    label: "Contracts",
+    prompt: "Kailangan ko magpa-review ng kontrata for my SME."
+  },
+  {
+    label: "Collections",
+    prompt: "May customer/supplier na hindi nagbabayad."
+  },
+  {
+    label: "Tenant",
+    prompt: "Pinaalis ako sa inuupahan ko nang walang abiso."
+  },
+  {
+    label: "Cybercrime",
+    prompt: "May nag-post ng paninira sa akin online."
+  },
+  {
+    label: "Barangay/LGU",
+    prompt: "May barangay or LGU concern ako. Ano ang dapat ihanda?"
+  }
 ];
 
 const samples = [
@@ -115,12 +139,13 @@ export default function Home() {
 
             <div className="mb-4 flex flex-wrap gap-2">
               {topics.map((topic) => (
-                <span
-                  key={topic}
-                  className="rounded-full bg-[#f1e5cd] px-3 py-1 text-xs font-semibold text-[#76551b]"
+                <button
+                  key={topic.label}
+                  onClick={() => sendMessage(topic.prompt)}
+                  className="rounded-full bg-[#f1e5cd] px-3 py-1 text-xs font-semibold text-[#76551b] transition hover:bg-[#c99b3b] hover:text-white"
                 >
-                  {topic}
-                </span>
+                  {topic.label}
+                </button>
               ))}
             </div>
 
@@ -264,4 +289,5 @@ export default function Home() {
     </main>
   );
 }
+
 
